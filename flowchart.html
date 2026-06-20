@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IoT School Bell System - Interactive Simulator</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Courier+Prime&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* Styling tokens */
+    :root {
+      --bg-dark: #070b13;
+      --bg-card: rgba(15, 23, 42, 0.6);
+      --border-color: rgba(255, 255, 255, 0.08);
+      
+      --color-primary: #00f0ff;
+      --color-primary-glow: rgba(0, 240, 255, 0.4);
+      --color-success: #39ff14;
+      --color-success-glow: rgba(57, 255, 20, 0.4);
+      --color-warn: #ff9100;
+      --color-warn-glow: rgba(255, 145, 0, 0.4);
+      --color-danger: #ff3d00;
+      --color-danger-glow: rgba(255, 61, 0, 0.4);
+      
+      --color-text-main: #f8fafc;
+      --color-text-muted: #8f9cae;
+      --color-node-bg: #0f172a;
+      --color-node-border: #1e3a8a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(20, 30, 80, 0.25) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(10, 40, 90, 0.2) 0px, transparent 50%);
+      color: var(--color-text-main);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 30px;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 10px;
+    }
+
+    header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--color-text-muted);
+      margin-top: 4px;
+    }
+
+    .badge-iot {
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid var(--color-primary);
+      color: var(--color-primary);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+    }
+
+    /* Glass Cards */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+      opacity: 0.3;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 12px;
+    }
+
+    /* SVG Flowchart styling */
+    .flowchart-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+      max-height: 860px;
+    }
+
+    /* Node & Path States */
+    .flow-node {
+      fill: var(--color-node-bg);
+      stroke: var(--color-node-border);
+      stroke-width: 2px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .flow-node-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      fill: var(--color-text-muted);
+      text-anchor: middle;
+      dominant-baseline: middle;
+      pointer-events: none;
+      font-weight: 500;
+      transition: all 0.4s ease;
+    }
+
+    .flow-path {
+      fill: none;
+      stroke: var(--color-node-border);
+      stroke-width: 2px;
+      transition: all 0.4s ease;
+      marker-end: url(#arrow-default);
+    }
+
+    /* Active Node highlights */
+    .flow-node.active-node {
+      fill: rgba(30, 41, 59, 0.8);
+      stroke: var(--color-primary);
+      stroke-width: 3px;
+      filter: drop-shadow(0px 0px 8px var(--color-primary-glow));
+    }
+
+    .flow-node.active-node.decision-node {
+      stroke: var(--color-success);
+      filter: drop-shadow(0px 0px 8px var(--color-success-glow));
+    }
+
+    .flow-node.active-node.alarm-node {
+      stroke: var(--color-warn);
+      filter: drop-shadow(0px 0px 8px var(--color-warn-glow));
+    }
+
+    .active-node + .flow-node-text {
+      fill: #ffffff;
+      font-weight: 700;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    }
+
+    /* Active Path flow animations */
+    .flow-path.active-path {
+      stroke: var(--color-primary);
+      stroke-width: 3px;
+      stroke-dasharray: 8 4;
+      animation: svg-flow 1.5s linear infinite;
+      filter: drop-shadow(0px 0px 4px var(--color-primary-glow));
+      marker-end: url(#arrow-blue);
+    }
+
+    .flow-path.active-path-yes {
+      stroke: var(--color-success);
+      stroke-width: 3px;
+      stroke-dasharray: 8 4;
+      animation: svg-flow 1.5s linear infinite;
+      filter: drop-shadow(0px 0px 4px var(--color-success-glow));
+      marker-end: url(#arrow-green);
+    }
+
+    .flow-path.active-path-no {
+      stroke: var(--color-danger);
+      stroke-width: 3px;
+      stroke-dasharray: 8 4;
+      animation: svg-flow 1.5s linear infinite;
+      filter: drop-shadow(0px 0px 4px var(--color-danger-glow));
+      marker-end: url(#arrow-red);
+    }
+
+    @keyframes svg-flow {
+      to {
+        stroke-dashoffset: -24;
+      }
+    }
+
+    /* Dashboard Widgets */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 15px;
+      margin-bottom: 24px;
+    }
+
+    .widget {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .widget:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .widget-label {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      margin-top: 8px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .widget-val {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    /* Status indicators */
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .status-active { color: var(--color-success); background-color: var(--color-success); }
+    .status-inactive { color: var(--color-danger); background-color: var(--color-danger); }
+    .status-pending { color: var(--color-warn); background-color: var(--color-warn); }
+
+    /* Control Panel Buttons */
+    .control-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--color-text-main);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--bg-dark);
+    }
+
+    .btn-primary:hover {
+      background: #00d2e0;
+      border-color: #00d2e0;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+    }
+
+    .btn-danger {
+      background: rgba(255, 61, 0, 0.1);
+      border-color: var(--color-danger);
+      color: var(--color-danger);
+    }
+
+    .btn-danger:hover {
+      background: var(--color-danger);
+      color: white;
+      box-shadow: 0 0 12px rgba(255, 61, 0, 0.4);
+    }
+
+    /* Terminal Console */
+    .terminal-container {
+      background: #020408;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 15px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      height: 280px;
+    }
+
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .terminal-title {
+      font-family: 'Courier Prime', monospace;
+      font-size: 12px;
+      color: var(--color-text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .terminal-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot-red { background-color: #ff5f56; }
+    .dot-yellow { background-color: #ffbd2e; }
+    .dot-green { background-color: #27c93f; }
+
+    .terminal-body {
+      font-family: 'Courier Prime', monospace;
+      font-size: 12px;
+      color: #39ff14;
+      overflow-y: auto;
+      flex-grow: 1;
+      padding-right: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      scroll-behavior: smooth;
+    }
+
+    .terminal-line {
+      line-height: 1.4;
+      word-break: break-all;
+    }
+    
+    .terminal-line .timestamp {
+      color: #5555ff;
+      margin-right: 5px;
+    }
+
+    .terminal-line .tag-system { color: #ffffff; }
+    .terminal-line .tag-wifi { color: #00f0ff; }
+    .terminal-line .tag-db { color: #ff9100; }
+    .terminal-line .tag-err { color: #ff3d00; }
+
+    /* Scheduler Setup Card */
+    .schedule-card {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+    }
+
+    .schedule-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .schedule-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .schedule-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .schedule-chip button {
+      background: none;
+      border: none;
+      color: var(--color-danger);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .schedule-add {
+      display: flex;
+      gap: 8px;
+    }
+
+    .schedule-input {
+      background: #020408;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      flex-grow: 1;
+    }
+
+    .schedule-input:focus {
+      border-color: var(--color-primary);
+    }
+
+    /* Animations */
+    @keyframes bell-ring {
+      0% { transform: rotate(0deg); }
+      10% { transform: rotate(15deg); }
+      20% { transform: rotate(-15deg); }
+      30% { transform: rotate(10deg); }
+      40% { transform: rotate(-10deg); }
+      50% { transform: rotate(5deg); }
+      60% { transform: rotate(-5deg); }
+      70% { transform: rotate(0deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    .bell-icon-active {
+      animation: bell-ring 0.4s ease infinite;
+      transform-origin: top center;
+      color: var(--color-warn) !important;
+      filter: drop-shadow(0 0 8px var(--color-warn-glow));
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1><i data-lucide="bell-ring" id="header-bell"></i> IoT Automatic School Bell Controller</h1>
+      <div class="subtitle">Interactive Engineering Flowchart & Device Simulation Dashboard</div>
+    </div>
+    <span class="badge-iot">ESP32 System</span>
+  </header>
+
+  <div class="container">
+    
+    <!-- LEFT PANEL: Interactive SVG Flowchart -->
+    <div class="card">
+      <div class="card-title">
+        <i data-lucide="git-commit" style="color: var(--color-primary);"></i>
+        Standard Flowchart Sequence
+      </div>
+      
+      <div class="flowchart-container">
+        <svg viewBox="0 0 550 920" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow-default" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#1e3a8a" />
+            </marker>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#00f0ff" />
+            </marker>
+            <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#39ff14" />
+            </marker>
+            <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ff3d00" />
+            </marker>
+          </defs>
+
+          <!-- PATHS (Lines) -->
+          <!-- Power to Wifi -->
+          <path id="path-power-to-wifi" class="flow-path" d="M 275,62 L 275,95" />
+          <!-- Wifi to Sync -->
+          <path id="path-wifi-to-sync" class="flow-path" d="M 275,139 L 275,179" />
+          <!-- Sync to Schedule -->
+          <path id="path-sync-to-schedule" class="flow-path" d="M 275,223 L 275,263" />
+          <!-- Schedule to Compare -->
+          <path id="path-schedule-to-compare" class="flow-path" d="M 275,307 L 275,347" />
+          <!-- Compare to Decision -->
+          <path id="path-compare-to-decision" class="flow-path" d="M 275,395 L 275,435" />
+          <!-- Decision to Compare (No path) -->
+          <path id="path-decision-to-compare" class="flow-path" d="M 155,485 L 80,485 L 80,371 L 145,371" />
+          <!-- Decision to Relay (Yes path) -->
+          <path id="path-decision-to-relay" class="flow-path" d="M 275,535 L 275,585" />
+          <!-- Relay to Ring -->
+          <path id="path-relay-to-ring" class="flow-path" d="M 275,629 L 275,669" />
+          <!-- Ring to Off -->
+          <path id="path-ring-to-off" class="flow-path" d="M 275,713 L 275,753" />
+          <!-- Off to Upload -->
+          <path id="path-off-to-upload" class="flow-path" d="M 275,797 L 275,837" />
+          <!-- Upload to Compare (Return loop) -->
+          <path id="path-upload-to-compare" class="flow-path" d="M 405,859 L 470,859 L 470,371 L 405,371" />
+
+
+          <!-- NODES (Shapes) -->
+          
+          <!-- Node 1: Power ON (Oval/Ellipse) -->
+          <ellipse id="node-power-on" class="flow-node start-node" cx="275" cy="40" rx="90" ry="22" />
+          <text class="flow-node-text" x="275" y="40">Power ON System</text>
+
+          <!-- Node 2: Connect Wi-Fi (Rectangle) -->
+          <rect id="node-connect-wifi" class="flow-node" x="145" y="95" width="260" height="44" rx="8" />
+          <text class="flow-node-text" x="275" y="117">Connect ESP32 to Wi-Fi Network</text>
+
+          <!-- Node 3: Sync Time (Rectangle) -->
+          <rect id="node-sync-time" class="flow-node" x="145" y="179" width="260" height="44" rx="8" />
+          <text class="flow-node-text" x="275" y="201">Synchronize Time (NTP/RTC)</text>
+
+          <!-- Node 4: Retrieve Schedule (Rectangle) -->
+          <rect id="node-get-schedule" class="flow-node" x="145" y="263" width="260" height="44" rx="8" />
+          <text class="flow-node-text" x="275" y="285">Retrieve Schedule from Cloud DB</text>
+
+          <!-- Node 5: Compare Time (Rectangle) -->
+          <rect id="node-compare-time" class="flow-node" x="145" y="347" width="260" height="48" rx="8" />
+          <text class="flow-node-text" x="275" y="371">Compare Current Time &amp; Schedule</text>
+
+          <!-- Node 6: Is Bell Time? (Diamond) -->
+          <polygon id="node-is-bell-time" class="flow-node decision-node" points="275,435 395,485 275,535 155,485" />
+          <text class="flow-node-text" x="275" y="485" style="font-weight: 600;">Is it Bell Time?</text>
+          
+          <!-- Labels for Decision -->
+          <text x="110" y="472" fill="#ff3d00" font-size="12" font-weight="bold" text-anchor="middle">No</text>
+          <text x="292" y="560" fill="#39ff14" font-size="12" font-weight="bold" text-anchor="middle">Yes</text>
+
+          <!-- Node 7: Activate Relay (Rectangle) -->
+          <rect id="node-activate-relay" class="flow-node" x="145" y="585" width="260" height="44" rx="8" />
+          <text class="flow-node-text" x="275" y="607">Activate Relay Module</text>
+
+          <!-- Node 8: School Bell Rings (Rectangle) -->
+          <rect id="node-ring-bell" class="flow-node alarm-node" x="145" y="669" width="260" height="44" rx="8" />
+          <text class="flow-node-text" x="275" y="691">School Bell Rings (10 Sec)</text>
+
+          <!-- Node 9: Turn OFF Bell (Rectangle) -->
+          <rect id="node-turn-off-bell" class="flow-node" x="145" y="753" width="260" height="44" rx="8" />
+          <text class="flow-node-text" x="275" y="775">Turn OFF Bell Automatically</text>
+
+          <!-- Node 10: Upload Logs (Rectangle) -->
+          <rect id="node-upload-logs" class="flow-node" x="145" y="837" width="260" height="44" rx="8" />
+          <text class="flow-node-text" x="275" y="859">Upload Status &amp; Event Logs</text>
+
+        </svg>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: Dashboard Simulator -->
+    <div style="display: flex; flex-direction: column; gap: 30px;">
+      
+      <!-- Card 2A: Device Monitoring Panel -->
+      <div class="card">
+        <div class="card-title">
+          <i data-lucide="gauge" style="color: var(--color-primary);"></i>
+          Real-Time Hardware Monitor
+        </div>
+        
+        <div class="dashboard-grid">
+          <div class="widget">
+            <i data-lucide="wifi" id="icon-wifi" style="color: var(--color-text-muted); width: 24px; height: 24px;"></i>
+            <span class="widget-label">Wi-Fi Connection</span>
+            <span class="widget-val" id="val-wifi"><span class="status-dot status-inactive"></span>Off</span>
+          </div>
+          
+          <div class="widget">
+            <i data-lucide="clock" style="color: var(--color-primary); width: 24px; height: 24px;"></i>
+            <span class="widget-label">Current RTC Time</span>
+            <span class="widget-val" id="val-clock" style="font-family: 'Courier Prime', monospace; letter-spacing: 0.5px;">16:26:52</span>
+          </div>
+
+          <div class="widget">
+            <i data-lucide="cpu" style="color: var(--color-success); width: 24px; height: 24px;"></i>
+            <span class="widget-label">System State</span>
+            <span class="widget-val" id="val-state" style="font-size: 14px; text-transform: uppercase;">Power Off</span>
+          </div>
+          
+          <div class="widget">
+            <i data-lucide="zap" id="icon-relay" style="color: var(--color-text-muted); width: 24px; height: 24px;"></i>
+            <span class="widget-label">Relay Pin (GPIO22)</span>
+            <span class="widget-val" id="val-relay"><span class="status-dot status-inactive"></span>LOW</span>
+          </div>
+
+          <div class="widget">
+            <i data-lucide="bell" id="icon-bell" style="color: var(--color-text-muted); width: 24px; height: 24px;"></i>
+            <span class="widget-label">Bell Status</span>
+            <span class="widget-val" id="val-bell">SILENT</span>
+          </div>
+
+          <div class="widget">
+            <i data-lucide="cloud-lightning" id="icon-cloud" style="color: var(--color-text-muted); width: 24px; height: 24px;"></i>
+            <span class="widget-label">Cloud Database</span>
+            <span class="widget-val" id="val-cloud">Offline</span>
+          </div>
+        </div>
+
+        <!-- Simulation Controls -->
+        <div class="schedule-title" style="margin-bottom: 10px;">
+          <span>Simulation Controllers</span>
+        </div>
+        <div class="control-panel">
+          <button class="btn btn-primary" id="btn-boot" onclick="triggerBootSequence()">
+            <i data-lucide="power"></i> Power Cycle ESP32
+          </button>
+          <button class="btn" id="btn-wifi" onclick="toggleWiFiConnection()" disabled>
+            <i data-lucide="wifi-off"></i> Disconnect Wi-Fi
+          </button>
+          <button class="btn btn-danger" id="btn-force-bell" onclick="simulateBellTimeMatch()" disabled>
+            <i data-lucide="bell-ring"></i> Trigger Bell Event
+          </button>
+        </div>
+
+        <!-- Schedule database manager -->
+        <div class="schedule-card">
+          <div class="schedule-title">
+            <span>Stored Bell Schedule (Cloud Database Sync)</span>
+            <span style="font-size: 11px; font-weight: normal; color: var(--color-primary);" id="sync-status">Not synced</span>
+          </div>
+          <div class="schedule-list" id="schedule-chips-container">
+            <!-- Chips will go here -->
+          </div>
+          <div class="schedule-add">
+            <input type="text" class="schedule-input" id="time-input" placeholder="Add time (e.g. 16:27:10)" disabled>
+            <button class="btn" onclick="addNewAlarm()" id="btn-add-alarm" disabled style="padding: 5px 12px;">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2B: Monospace Terminal Console -->
+      <div class="card">
+        <div class="card-title">
+          <i data-lucide="terminal" style="color: var(--color-success);"></i>
+          Serial Log Monitor (ESP32 Output)
+        </div>
+        
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <div class="terminal-title">
+              <i data-lucide="terminal" style="width:14px;height:14px;"></i> COM3 - 115200 baud
+            </div>
+            <div class="terminal-dots">
+              <div class="dot dot-red"></div>
+              <div class="dot dot-yellow"></div>
+              <div class="dot dot-green"></div>
+            </div>
+          </div>
+          
+          <div class="terminal-body" id="console-logs">
+            <div class="terminal-line"><span class="timestamp">[00:00:00]</span><span class="tag-system">SYSTEM: Device powered OFF. Click "Power Cycle ESP32" above to boot.</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // System variables
+    let isPoweredOn = false;
+    let isWiFiConnected = false;
+    let schedule = ["08:30:00", "10:30:00", "12:00:00", "13:30:00", "15:30:00"];
+    let systemTime = new Date("2026-06-16T16:26:52"); // Lock to default initial time
+    let systemState = "POWER_OFF";
+    let isLooping = false;
+    let loopTimeout = null;
+    let nextAlarmIndex = -1;
+    let syncComplete = false;
+    
+    // UI Elements
+    const valClock = document.getElementById("val-clock");
+    const valWifi = document.getElementById("val-wifi");
+    const valState = document.getElementById("val-state");
+    const valRelay = document.getElementById("val-relay");
+    const valBell = document.getElementById("val-bell");
+    const valCloud = document.getElementById("val-cloud");
+    const consoleLogs = document.getElementById("console-logs");
+    
+    const iconWifi = document.getElementById("icon-wifi");
+    const iconRelay = document.getElementById("icon-relay");
+    const iconBell = document.getElementById("icon-bell");
+    const iconCloud = document.getElementById("icon-cloud");
+    const headerBell = document.getElementById("header-bell");
+    
+    const btnWiFi = document.getElementById("btn-wifi");
+    const btnForceBell = document.getElementById("btn-force-bell");
+    const timeInput = document.getElementById("time-input");
+    const btnAddAlarm = document.getElementById("btn-add-alarm");
+    
+    // Render Lucide icons
+    lucide.createIcons();
+
+    // Clock Updater (Ticks every 1s)
+    setInterval(() => {
+      systemTime.setSeconds(systemTime.getSeconds() + 1);
+      const timeStr = formatTime(systemTime);
+      valClock.innerText = timeStr;
+      
+      // If system is running loop monitoring, check time
+      if (systemState === "MONITOR_COMPARE" && isWiFiConnected) {
+        checkTimeMatch(timeStr);
+      }
+    }, 1000);
+
+    // Helpers
+    function formatTime(date) {
+      const h = String(date.getHours()).padStart(2, '0');
+      const m = String(date.getMinutes()).padStart(2, '0');
+      const s = String(date.getSeconds()).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+
+    function addLog(tag, category, text) {
+      const timeStr = formatTime(systemTime);
+      const line = document.createElement("div");
+      line.className = "terminal-line";
+      line.innerHTML = `<span class="timestamp">[${timeStr}]</span><span class="tag-${category}">${tag.toUpperCase()}: ${text}</span>`;
+      consoleLogs.appendChild(line);
+      consoleLogs.scrollTop = consoleLogs.scrollHeight;
+    }
+
+    function clearHighlightNodes() {
+      document.querySelectorAll(".flow-node").forEach(node => {
+        node.classList.remove("active-node");
+      });
+      document.querySelectorAll(".flow-path").forEach(path => {
+        path.classList.remove("active-path", "active-path-yes", "active-path-no");
+      });
+    }
+
+    function setNodeActive(nodeId) {
+      const node = document.getElementById(nodeId);
+      if (node) node.classList.add("active-node");
+    }
+
+    function setPathActive(pathId, type = "default") {
+      const path = document.getElementById(pathId);
+      if (path) {
+        if (type === "yes") path.classList.add("active-path-yes");
+        else if (type === "no") path.classList.add("active-path-no");
+        else path.classList.add("active-path");
+      }
+    }
+
+    // Schedule manager rendering
+    function renderScheduleChips() {
+      const container = document.getElementById("schedule-chips-container");
+      container.innerHTML = "";
+      schedule.forEach((time, index) => {
+        const chip = document.createElement("span");
+        chip.className = "schedule-chip";
+        chip.innerHTML = `${time} <button onclick="removeAlarm(${index})">&times;</button>`;
+        container.appendChild(chip);
+      });
+    }
+
+    function removeAlarm(index) {
+      if (!isWiFiConnected) {
+        addLog("system", "err", "Cannot modify schedule. Cloud connection offline.");
+        return;
+      }
+      addLog("db", "db", `Removed schedule time ${schedule[index]}`);
+      schedule.splice(index, 1);
+      renderScheduleChips();
+    }
+
+    function addNewAlarm() {
+      const val = timeInput.value.trim();
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+      if (!timeRegex.test(val)) {
+        alert("Please use HH:MM:SS format (e.g. 16:28:30)");
+        return;
+      }
+      if (schedule.includes(val)) {
+        alert("Time already exists!");
+        return;
+      }
+      schedule.push(val);
+      schedule.sort();
+      renderScheduleChips();
+      addLog("db", "db", `Added new scheduled bell time: ${val}`);
+      timeInput.value = "";
+    }
+
+    // --- State-Machine Boot Sequence ---
+    function triggerBootSequence() {
+      if (loopTimeout) clearTimeout(loopTimeout);
+      isLooping = false;
+      
+      isPoweredOn = true;
+      syncComplete = false;
+      systemState = "BOOT_POWER_ON";
+      valState.innerText = "Power On";
+      
+      // Update hardware indicators
+      valWifi.innerHTML = `<span class="status-dot status-inactive"></span>Off`;
+      iconWifi.style.color = "var(--color-text-muted)";
+      valRelay.innerHTML = `<span class="status-dot status-inactive"></span>LOW`;
+      iconRelay.style.color = "var(--color-text-muted)";
+      valBell.innerText = "SILENT";
+      valBell.style.color = "var(--color-text-muted)";
+      iconBell.className = "lucide lucide-bell";
+      iconBell.classList.remove("bell-icon-active");
+      valCloud.innerText = "Offline";
+      valCloud.style.color = "var(--color-text-muted)";
+      iconCloud.style.color = "var(--color-text-muted)";
+      
+      document.getElementById("sync-status").innerText = "Not synced";
+      document.getElementById("sync-status").style.color = "var(--color-text-muted)";
+      
+      // Enable/Disable buttons
+      btnWiFi.disabled = false;
+      btnWiFi.innerHTML = `<i data-lucide="wifi-off"></i> Disconnect Wi-Fi`;
+      btnForceBell.disabled = true;
+      timeInput.disabled = true;
+      btnAddAlarm.disabled = true;
+      lucide.createIcons();
+
+      consoleLogs.innerHTML = "";
+      addLog("system", "system", "Hardware boot. Initializing ESP32 microcontroller...");
+      
+      clearHighlightNodes();
+      setNodeActive("node-power-on");
+
+      // Step 2: WiFi Connecting
+      setTimeout(() => {
+        if (!isPoweredOn) return;
+        systemState = "BOOT_WIFI_CONNECTING";
+        valState.innerText = "WiFi Setup";
+        addLog("wifi", "wifi", "Searching for pre-configured Wi-Fi SSID 'School_Bell_Net'...");
+        
+        clearHighlightNodes();
+        setNodeActive("node-connect-wifi");
+        setPathActive("path-power-to-wifi");
+
+        // Simulating WiFi Connection success
+        setTimeout(() => {
+          if (!isPoweredOn) return;
+          isWiFiConnected = true;
+          valWifi.innerHTML = `<span class="status-dot status-active"></span>Connected`;
+          iconWifi.style.color = "var(--color-primary)";
+          addLog("wifi", "wifi", "Connected! IP Assigned: 192.168.1.104 (RSSI: -58dBm)");
+
+          // Step 3: Sync Time
+          systemState = "BOOT_SYNC_TIME";
+          valState.innerText = "Time Sync";
+          addLog("system", "system", "Querying NTP time servers & checking Hardware DS3231 RTC Module...");
+          
+          clearHighlightNodes();
+          setNodeActive("node-sync-time");
+          setPathActive("path-wifi-to-sync");
+
+          // Sync success
+          setTimeout(() => {
+            if (!isPoweredOn) return;
+            addLog("system", "system", "Time synchronized. Local Clock calibrated to GMT+5:30.");
+            
+            // Step 4: Retrieve Schedule
+            systemState = "BOOT_GET_SCHEDULE";
+            valState.innerText = "Schedule Fetch";
+            addLog("db", "db", "Accessing Cloud Schedule Database REST endpoint...");
+            
+            clearHighlightNodes();
+            setNodeActive("node-get-schedule");
+            setPathActive("path-sync-to-schedule");
+
+            // Schedule Loaded
+            setTimeout(() => {
+              if (!isPoweredOn) return;
+              syncComplete = true;
+              valCloud.innerText = "Cloud Sync OK";
+              valCloud.style.color = "var(--color-success)";
+              iconCloud.style.color = "var(--color-success)";
+              
+              document.getElementById("sync-status").innerText = "Cloud Database Connected";
+              document.getElementById("sync-status").style.color = "var(--color-success)";
+              
+              addLog("db", "db", `Successfully synchronized ${schedule.length} bell schedule events.`);
+              
+              btnForceBell.disabled = false;
+              timeInput.disabled = false;
+              btnAddAlarm.disabled = false;
+              renderScheduleChips();
+
+              // Step 5: Start Comparison Loop
+              enterMonitoringLoop();
+
+            }, 1500);
+
+          }, 1200);
+
+        }, 1500);
+
+      }, 1000);
+    }
+
+    // --- State-Machine loop ---
+    function enterMonitoringLoop() {
+      if (!isPoweredOn) return;
+      isLooping = true;
+      systemState = "MONITOR_COMPARE";
+      valState.innerText = "Monitoring";
+      addLog("system", "system", "Entering continuous comparison loop.");
+      
+      runDecisionLoop();
+    }
+
+    function runDecisionLoop() {
+      if (!isLooping || !isPoweredOn) return;
+      
+      clearHighlightNodes();
+      setNodeActive("node-compare-time");
+      setPathActive("path-schedule-to-compare");
+      if (syncComplete) {
+        setPathActive("path-upload-to-compare"); // Highlight loop return lines when operational
+      }
+
+      // After 1 second, run decision
+      loopTimeout = setTimeout(() => {
+        if (!isPoweredOn) return;
+        systemState = "MONITOR_DECISION";
+        clearHighlightNodes();
+        setNodeActive("node-is-bell-time");
+        setPathActive("path-compare-to-decision");
+
+        // Wait a short bit to show decision
+        loopTimeout = setTimeout(() => {
+          if (!isPoweredOn) return;
+          
+          // Normally it returns NO, so loop back to compare
+          addLog("system", "system", "Checking bell time... Match not found.");
+          setPathActive("path-decision-to-compare", "no");
+
+          loopTimeout = setTimeout(() => {
+            systemState = "MONITOR_COMPARE";
+            runDecisionLoop();
+          }, 800);
+
+        }, 600);
+
+      }, 1500);
+    }
+
+    // Wi-Fi Toggler
+    function toggleWiFiConnection() {
+      if (!isPoweredOn) return;
+      
+      if (isWiFiConnected) {
+        // Disconnect
+        isWiFiConnected = false;
+        isLooping = false;
+        if (loopTimeout) clearTimeout(loopTimeout);
+        
+        valWifi.innerHTML = `<span class="status-dot status-inactive"></span>Disconnected`;
+        iconWifi.style.color = "var(--color-danger)";
+        valCloud.innerText = "Disconnected";
+        valCloud.style.color = "var(--color-danger)";
+        iconCloud.style.color = "var(--color-danger)";
+        
+        document.getElementById("sync-status").innerText = "Offline (Wi-Fi disconnected)";
+        document.getElementById("sync-status").style.color = "var(--color-danger)";
+        
+        btnWiFi.innerHTML = `<i data-lucide="wifi"></i> Connect Wi-Fi`;
+        btnForceBell.disabled = true;
+        timeInput.disabled = true;
+        btnAddAlarm.disabled = true;
+        lucide.createIcons();
+        
+        systemState = "BOOT_WIFI_CONNECTING";
+        valState.innerText = "WIFI FAULT";
+        addLog("wifi", "err", "CRITICAL ERROR: Wi-Fi connection lost!");
+        addLog("system", "system", "Halting monitoring. Transitioning to Wi-Fi connection handler...");
+        
+        clearHighlightNodes();
+        setNodeActive("node-connect-wifi");
+        
+      } else {
+        // Reconnect
+        isWiFiConnected = true;
+        valWifi.innerHTML = `<span class="status-dot status-active"></span>Connected`;
+        iconWifi.style.color = "var(--color-primary)";
+        btnWiFi.innerHTML = `<i data-lucide="wifi-off"></i> Disconnect Wi-Fi`;
+        lucide.createIcons();
+        
+        addLog("wifi", "wifi", "Wi-Fi connection re-established!");
+        
+        // Return to time sync
+        systemState = "BOOT_SYNC_TIME";
+        valState.innerText = "Time Sync";
+        clearHighlightNodes();
+        setNodeActive("node-sync-time");
+        setPathActive("path-wifi-to-sync");
+        
+        setTimeout(() => {
+          addLog("system", "system", "RTC synchronized.");
+          systemState = "BOOT_GET_SCHEDULE";
+          valState.innerText = "Schedule Fetch";
+          clearHighlightNodes();
+          setNodeActive("node-get-schedule");
+          setPathActive("path-sync-to-schedule");
+          
+          setTimeout(() => {
+            valCloud.innerText = "Cloud Sync OK";
+            valCloud.style.color = "var(--color-success)";
+            iconCloud.style.color = "var(--color-success)";
+            
+            document.getElementById("sync-status").innerText = "Cloud Database Connected";
+            document.getElementById("sync-status").style.color = "var(--color-success)";
+            
+            btnForceBell.disabled = false;
+            timeInput.disabled = false;
+            btnAddAlarm.disabled = false;
+            
+            enterMonitoringLoop();
+          }, 1000);
+        }, 1000);
+      }
+    }
+
+    // Force bell matching via controller
+    function simulateBellTimeMatch() {
+      if (!isPoweredOn || !isWiFiConnected) return;
+      
+      // Stop regular monitoring loop
+      isLooping = false;
+      if (loopTimeout) clearTimeout(loopTimeout);
+      
+      // Trigger Alarm path sequence
+      triggerAlarmSequence();
+    }
+
+    // Timer check function for scheduler
+    function checkTimeMatch(currentTimeStr) {
+      if (schedule.includes(currentTimeStr)) {
+        isLooping = false;
+        if (loopTimeout) clearTimeout(loopTimeout);
+        addLog("system", "system", `Time MATCH detected at ${currentTimeStr}!`);
+        triggerAlarmSequence();
+      }
+    }
+
+    // --- State-Machine Alarm Sequence (Yes Path) ---
+    function triggerAlarmSequence() {
+      // Step 1: Decision Yes highlight
+      systemState = "MONITOR_DECISION";
+      valState.innerText = "Matching";
+      clearHighlightNodes();
+      setNodeActive("node-is-bell-time");
+      setPathActive("path-compare-to-decision");
+      
+      addLog("system", "system", "Bell match found. Transitioning to relay trigger...");
+      
+      setTimeout(() => {
+        if (!isPoweredOn) return;
+        
+        // Step 2: Activate Relay
+        systemState = "BELL_ACTIVATE_RELAY";
+        valState.innerText = "Relay ON";
+        valRelay.innerHTML = `<span class="status-dot status-active"></span>HIGH`;
+        iconRelay.style.color = "var(--color-success)";
+        addLog("system", "system", "GPIO Pin 22 set to HIGH. Activating optocoupler Relay module...");
+        
+        clearHighlightNodes();
+        setNodeActive("node-activate-relay");
+        setPathActive("path-decision-to-relay", "yes");
+
+        setTimeout(() => {
+          if (!isPoweredOn) return;
+
+          // Step 3: Bell Rings
+          systemState = "BELL_RINGING";
+          valState.innerText = "Ringing";
+          valBell.innerText = "RINGING (10s)";
+          valBell.style.color = "var(--color-warn)";
+          iconBell.classList.add("bell-icon-active");
+          headerBell.classList.add("bell-icon-active");
+          addLog("system", "system", "AC Power closed. School bell/buzzer is RINGING.");
+
+          clearHighlightNodes();
+          setNodeActive("node-ring-bell");
+          setPathActive("path-relay-to-ring");
+
+          // Keep ringing for 3.5s (simulating 10s ring)
+          setTimeout(() => {
+            if (!isPoweredOn) return;
+
+            // Step 4: Turn OFF Bell
+            systemState = "BELL_TURN_OFF";
+            valState.innerText = "Relay OFF";
+            valRelay.innerHTML = `<span class="status-dot status-inactive"></span>LOW`;
+            iconRelay.style.color = "var(--color-text-muted)";
+            valBell.innerText = "SILENT";
+            valBell.style.color = "var(--color-text-muted)";
+            iconBell.classList.remove("bell-icon-active");
+            headerBell.classList.remove("bell-icon-active");
+            addLog("system", "system", "Bell duration timer expired. GPIO Pin 22 set to LOW. Relay open.");
+
+            clearHighlightNodes();
+            setNodeActive("node-turn-off-bell");
+            setPathActive("path-ring-to-off");
+
+            setTimeout(() => {
+              if (!isPoweredOn) return;
+
+              // Step 5: Upload logs
+              systemState = "BELL_UPLOAD_LOGS";
+              valState.innerText = "Uploading";
+              addLog("db", "db", "Transmitting trigger logs & status payloads to Cloud Platform API...");
+              
+              clearHighlightNodes();
+              setNodeActive("node-upload-logs");
+              setPathActive("path-off-to-upload");
+
+              setTimeout(() => {
+                if (!isPoweredOn) return;
+                addLog("db", "db", "Status report uploaded. Database response code: 200 OK.");
+                
+                // Return path highlight
+                clearHighlightNodes();
+                setPathActive("path-upload-to-compare");
+                
+                setTimeout(() => {
+                  if (!isPoweredOn) return;
+                  // Loop back to monitor
+                  enterMonitoringLoop();
+                }, 800);
+
+              }, 1200);
+
+            }, 1000);
+
+          }, 3500);
+
+        }, 1000);
+
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

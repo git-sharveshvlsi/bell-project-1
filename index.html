@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IoT Automated School Bell System - Project Portal</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&family=Courier+Prime&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="lucide.min.js"></script>
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Floating Theme Toggle Button -->
+  <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+    <i data-lucide="sun" id="theme-icon-light" style="display: none;"></i>
+    <i data-lucide="moon" id="theme-icon-dark"></i>
+  </button>
+
+  <!-- ADMIN LOGIN PAGE -->
+  <div id="login-container" class="login-container">
+    <div class="login-card">
+      <div class="login-logo-container">
+        <img src="logo.png" alt="Project Logo" class="login-project-logo">
+      </div>
+      <h2>ESP32 Bell Console</h2>
+      <p class="login-subtitle">Secure Administration Login</p>
+      
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="input-group">
+          <label for="username">Username</label>
+          <div class="input-wrapper">
+            <i data-lucide="user"></i>
+            <input type="text" id="username" placeholder="Enter username" required autocomplete="off">
+          </div>
+        </div>
+        
+        <div class="input-group">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <i data-lucide="key-round"></i>
+            <input type="password" id="password" placeholder="Enter password" required>
+          </div>
+        </div>
+        
+        <div id="login-error" class="login-error-msg" style="display: none;">
+          <i data-lucide="alert-circle"></i> Invalid username or password
+        </div>
+        
+        <button type="submit" class="btn-login">
+          <span>Authenticate Session</span>
+          <i data-lucide="shield-check"></i>
+        </button>
+      </form>
+      
+      <div class="login-helper">
+        <i data-lucide="help-circle"></i>
+        <span>Demo Credentials: <strong>admin</strong> / <strong>admin123</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STARTUP MODE SELECTION OVERLAY -->
+  <div id="mode-setup-container" class="login-container" style="display: none;">
+    <div class="login-card mode-setup-card-wrap">
+      <div class="login-logo-container" style="margin-bottom: 15px;">
+        <div class="login-logo" style="background: linear-gradient(135deg, var(--color-secondary), var(--color-warn)); box-shadow: 0 0 25px var(--color-secondary-glow);">
+          <i data-lucide="settings"></i>
+        </div>
+      </div>
+      <h2>Initialize System Mode</h2>
+      <p class="login-subtitle" style="margin-bottom: 24px;">Please select the operational bell schedule to activate for this session.</p>
+      
+      <div class="startup-mode-grid">
+        <div class="startup-mode-option" id="opt-mode-general" onclick="selectStartupMode('general')">
+          <div class="option-icon-wrap">
+            <i data-lucide="calendar"></i>
+          </div>
+          <h3>General Mode</h3>
+          <p>Standard weekly academic timetable. Rings bells on weekdays (Mon-Fri) for normal school classes.</p>
+          <span class="mode-meta-badge badge-general">5 Alarms Default</span>
+        </div>
+        
+        <div class="startup-mode-option" id="opt-mode-exam" onclick="selectStartupMode('exam')">
+          <div class="option-icon-wrap">
+            <i data-lucide="file-signature"></i>
+          </div>
+          <h3>Exam Mode</h3>
+          <p>Special examination block schedule. Includes Saturday timings. Mutes normal class periods.</p>
+          <span class="mode-meta-badge badge-exam">4 Alarms Default</span>
+        </div>
+        
+        <div class="startup-mode-option" id="opt-mode-holiday" onclick="selectStartupMode('holiday')">
+          <div class="option-icon-wrap">
+            <i data-lucide="sun"></i>
+          </div>
+          <h3>Holiday Mode</h3>
+          <p>Suspends all regular schedules. Mutes all automatic bell ring triggers. Fully manually controlled.</p>
+          <span class="mode-meta-badge badge-holiday">Muted / Suspended</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container" id="app-wrapper" style="display: none;">
+    
+    <!-- MOBILE HEADER NAVBAR -->
+    <div class="mobile-header">
+      <h2>IoT School Bell</h2>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i data-lucide="menu"></i></button>
+    </div>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar" id="app-sidebar">
+      <div class="brand-section">
+        <div class="brand-logo">
+          <i data-lucide="bell-ring"></i>
+        </div>
+        <div class="brand-title">
+          <h2>School Bell Portal</h2>
+          <span>IoT Engineering</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <li class="nav-item active" id="tab-dashboard">
+          <button onclick="switchTab('dashboard')">
+            <i data-lucide="layout-dashboard"></i> Control Dashboard
+          </button>
+        </li>
+        <li class="nav-item" id="tab-holidays">
+          <button onclick="switchTab('holidays')">
+            <i data-lucide="calendar-heart"></i> Holiday Calendar
+          </button>
+        </li>
+        <li class="nav-item" id="tab-simulator">
+          <button onclick="switchTab('simulator')">
+            <i data-lucide="play-circle"></i> Flow &amp; Simulator
+          </button>
+        </li>
+        <li class="nav-item" id="tab-hardware">
+          <button onclick="switchTab('hardware')">
+            <i data-lucide="cpu"></i> Hardware &amp; Wiring
+          </button>
+        </li>
+        <li class="nav-item" id="tab-code">
+          <button onclick="switchTab('code')">
+            <i data-lucide="code-2"></i> Firmware Code
+          </button>
+        </li>
+        <li class="nav-item" id="tab-cloud">
+          <button onclick="switchTab('cloud')">
+            <i data-lucide="cloud"></i> Cloud DB Dashboard
+          </button>
+        </li>
+        <li class="nav-item" id="tab-home">
+          <button onclick="switchTab('home')">
+            <i data-lucide="info"></i> Project Overview
+          </button>
+        </li>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="footer-meta">
+          <span>System Status:</span>
+          <span class="badge" id="sidebar-status-badge">STANDBY</span>
+        </div>
+        <button onclick="handleLogout()" class="btn btn-logout-sidebar" style="margin-top: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; padding: 8px;">
+          <i data-lucide="log-out" style="width: 14px; height: 14px;"></i> Logout Admin
+        </button>
+        <div style="margin-top: 8px;">College Mini-Project © 2026</div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT VIEWPORTS -->
+    <main class="main-content">
+      
+      <!-- ==================== TAB 0: CONTROL DASHBOARD ==================== -->
+      <section class="page-section active" id="sec-dashboard">
+        <div class="dashboard-header-banner">
+          <div>
+            <h1 class="section-title">ESP32 Automatic Bell System</h1>
+            <p class="section-subtitle" style="margin-bottom: 0;">Administrative control panel, scheduling, and device telemetry.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="admin-badge" id="dash-active-mode-badge" style="background: rgba(0, 240, 255, 0.08); border-color: rgba(0, 240, 255, 0.2); color: var(--color-primary); display: flex; align-items: center; gap: 4px;">
+              <i data-lucide="calendar" style="width: 13px; height: 13px;"></i>
+              <span id="dash-active-mode-text">General Mode</span>
+            </div>
+            <div class="admin-badge">
+              <span class="pulse-indicator"></span>
+              <span>Admin Active</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid-main">
+          
+          <!-- Column 1: Time, Status & Manual Control -->
+          <div class="dashboard-col">
+            <!-- Current Time & Date Card -->
+            <div class="card card-glowing time-card">
+              <div class="card-title">
+                <i data-lucide="clock" style="color: var(--color-primary);"></i>
+                System Clock Configuration
+              </div>
+              <div class="clock-display-wrap">
+                <div class="large-digital-clock" id="dash-clock">00:00:00</div>
+                <div class="date-day-display" id="dash-date-day">Loading Date &amp; Day...</div>
+              </div>
+              
+              <!-- Today is Holiday Banner -->
+              <div class="holiday-indicator-dash" id="dash-holiday-indicator" style="display: none; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #fca5a5; padding: 10px 14px; border-radius: 8px; font-size: 12.5px; align-items: center; gap: 8px; margin-bottom: 15px; text-align: left; animation: loginSlideUp 0.3s ease;">
+                <i data-lucide="flag-triangle-left" style="color: var(--color-danger); width: 16px; height: 16px; animation: ringShake 0.5s infinite alternate;"></i>
+                <span>Today is a holiday: <strong id="dash-holiday-name">Bakrid</strong> (Bell deactivated)</span>
+              </div>
+              
+              <!-- Inline Time Editor (hidden by default) -->
+              <div id="time-editor-form" class="time-editor-form" style="display: none;">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="edit-time">Time (HH:MM:SS)</label>
+                    <input type="text" id="edit-time" placeholder="14:45:00">
+                  </div>
+                  <div class="form-group">
+                    <label for="edit-date">Date (YYYY-MM-DD)</label>
+                    <input type="date" id="edit-date">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="edit-day">Day of Week</label>
+                    <select id="edit-day">
+                      <option value="Monday">Monday</option>
+                      <option value="Tuesday">Tuesday</option>
+                      <option value="Wednesday">Wednesday</option>
+                      <option value="Thursday">Thursday</option>
+                      <option value="Friday">Friday</option>
+                      <option value="Saturday">Saturday</option>
+                      <option value="Sunday">Sunday</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="btn-group" style="margin-top: 15px; margin-bottom: 0;">
+                  <button class="btn btn-primary btn-sm" onclick="saveSystemTime()">
+                    <i data-lucide="save" style="width: 14px; height: 14px;"></i> Save Clock
+                  </button>
+                  <button class="btn btn-sm" onclick="toggleTimeEditor(false)">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+
+              <div class="btn-group" id="clock-actions-row" style="margin-top: 20px; margin-bottom: 0;">
+                <button class="btn btn-primary" onclick="toggleTimeEditor(true)">
+                  <i data-lucide="calendar-range" style="width: 14px; height: 14px;"></i> Edit Time Manually
+                </button>
+                <button class="btn" onclick="syncClockWithHost()">
+                  <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Sync with NTP
+                </button>
+              </div>
+
+              <!-- Next Holiday Reminder Panel -->
+              <div class="upcoming-holiday-reminder" id="dash-upcoming-holiday-card" style="margin-top: 15px; background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.12); border-radius: 8px; padding: 10px 12px; font-size:12px; display:flex; align-items:center; justify-content:space-between; text-align: left;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <i data-lucide="gift" style="color: var(--color-warn); width:15px; height:15px;"></i>
+                  <span>Next Holiday: <strong id="next-holiday-name">Bakrid (Jun 25)</strong></span>
+                </div>
+                <button class="btn btn-sm" onclick="switchTab('holidays')" style="padding: 3px 8px; font-size: 10px; display: flex; align-items: center; gap: 4px;">
+                  <i data-lucide="eye" style="width: 11px; height: 11px;"></i> View
+                </button>
+              </div>
+            </div>
+
+            <!-- Bell Status & Manual Controls Card -->
+            <div class="card bell-control-card">
+              <div class="card-title">
+                <i data-lucide="bell" id="dash-bell-title-icon" style="color: var(--color-text-muted);"></i>
+                Bell Status &amp; Manual Control
+              </div>
+              <div class="bell-status-display">
+                <div class="bell-icon-wrapper" id="dash-bell-ring-container">
+                  <i data-lucide="bell" class="bell-large-icon" id="dash-bell-icon"></i>
+                  <div class="bell-pulse-rings"></div>
+                </div>
+                <div class="bell-status-text-block">
+                  <span class="bell-status-badge" id="dash-bell-status-badge">SILENT</span>
+                  <span class="bell-status-sub" id="dash-bell-status-sub">Automatic Scheduling Active</span>
+                </div>
+              </div>
+
+              <div class="btn-group manual-bell-btns" style="margin-bottom: 0;">
+                <button class="btn btn-success" id="btn-ring-now" onclick="ringBellManual()" style="flex: 1;">
+                  <i data-lucide="play" style="width: 14px; height: 14px;"></i> Ring Bell Now
+                </button>
+                <button class="btn btn-danger" id="btn-stop-now" onclick="stopBellManual()" disabled style="flex: 1;">
+                  <i data-lucide="square" style="width: 14px; height: 14px;"></i> Stop Bell Now
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Bell Schedule -->
+          <div class="dashboard-col">
+            <div class="card schedule-card">
+              <div class="card-title">
+                <i data-lucide="calendar-days" style="color: var(--color-secondary);"></i>
+                Daily Bell Alarms Schedule
+              </div>
+              <p class="section-subtitle" style="margin-bottom: 12px; font-size: 13px;">
+                Alarms trigger the 10-second bell relay. Matches occur on exact hour/minute/second.
+              </p>
+
+              <!-- Mode Specific Warning/Information Banners -->
+              <div id="dash-mode-banner-holiday" class="mode-banner-info" style="display: none; background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.2); color: #fcd34d; padding: 10px 14px; border-radius: 8px; font-size: 12px; align-items: center; gap: 8px; margin-bottom: 12px; text-align: left; animation: loginSlideUp 0.3s ease;">
+                <i data-lucide="info" style="color: var(--color-warn); width: 16px; height: 16px; flex-shrink: 0;"></i>
+                <span><strong>Holiday Mode:</strong> Regular schedules suspended. Only alarms below will ring.</span>
+              </div>
+              <div id="dash-mode-banner-exam" class="mode-banner-info" style="display: none; background: rgba(139, 92, 246, 0.06); border: 1px solid rgba(139, 92, 246, 0.2); color: #c084fc; padding: 10px 14px; border-radius: 8px; font-size: 12px; align-items: center; gap: 8px; margin-bottom: 12px; text-align: left; animation: loginSlideUp 0.3s ease;">
+                <i data-lucide="info" style="color: var(--color-secondary); width: 16px; height: 16px; flex-shrink: 0;"></i>
+                <span><strong>Exam Mode:</strong> Running exam alarm configurations (including Saturdays).</span>
+              </div>
+
+              <!-- List of Alarms -->
+              <div class="alarm-list-container" id="dash-alarm-list">
+                <!-- Alarm items generated dynamically -->
+              </div>
+
+              <!-- Add Alarm Form -->
+              <div class="add-alarm-box" style="margin-top: 20px;">
+                <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--color-text-main);">Add Scheduled Alarm</h4>
+                <div class="add-alarm-form-row">
+                  <input type="text" id="dash-new-alarm-time" placeholder="HH:MM:SS (e.g. 08:30:00)">
+                  <button class="btn btn-primary" onclick="addAlarmFromDash()">
+                    <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Add
+                  </button>
+                </div>
+                <div class="day-selector-row" style="margin-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.04); padding-top: 10px;">
+                  <span style="font-size: 11px; color: var(--color-text-muted); display: block; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Active Days:</span>
+                  <div class="day-chips-wrap" id="dash-add-day-chips">
+                    <button type="button" class="day-chip active" data-day="Monday" onclick="toggleAddDayChip(this)">M</button>
+                    <button type="button" class="day-chip active" data-day="Tuesday" onclick="toggleAddDayChip(this)">T</button>
+                    <button type="button" class="day-chip active" data-day="Wednesday" onclick="toggleAddDayChip(this)">W</button>
+                    <button type="button" class="day-chip active" data-day="Thursday" onclick="toggleAddDayChip(this)">T</button>
+                    <button type="button" class="day-chip active" data-day="Friday" onclick="toggleAddDayChip(this)">F</button>
+                    <button type="button" class="day-chip" data-day="Saturday" onclick="toggleAddDayChip(this)">S</button>
+                    <button type="button" class="day-chip" data-day="Sunday" onclick="toggleAddDayChip(this)">S</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: Device Monitoring & Reports -->
+          <div class="dashboard-col">
+            <!-- Device Monitoring -->
+            <div class="card monitoring-card">
+              <div class="card-title">
+                <i data-lucide="activity" style="color: var(--color-success);"></i>
+                ESP32 Hardware Diagnostics
+              </div>
+              
+              <div class="diag-widget-row">
+                <div class="diag-stat">
+                  <span class="diag-label">ESP32 Device</span>
+                  <span class="diag-value" id="dash-esp32-status"><span class="status-dot status-active"></span>ONLINE</span>
+                </div>
+                <div class="diag-stat">
+                  <span class="diag-label">Wi-Fi Connection</span>
+                  <span class="diag-value" id="dash-wifi-status"><span class="status-dot status-active"></span>CONNECTED</span>
+                </div>
+              </div>
+
+              <!-- Signal Strength Indicator -->
+              <div class="signal-indicator-box">
+                <div class="signal-label-row">
+                  <span class="diag-label">Wi-Fi Signal Strength</span>
+                  <span class="signal-value-text" id="dash-signal-val">-45 dBm</span>
+                </div>
+                <div class="signal-bars-gauge">
+                  <div class="sig-bar" data-level="1"></div>
+                  <div class="sig-bar" data-level="2"></div>
+                  <div class="sig-bar" data-level="3"></div>
+                  <div class="sig-bar" data-level="4"></div>
+                  <div class="sig-bar" data-level="5"></div>
+                  <span class="signal-badge" id="dash-signal-badge">STRONG</span>
+                </div>
+              </div>
+
+              <!-- Signal Strength Simulator dropdown -->
+              <div class="signal-simulator-row" style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                <label for="sim-signal-strength" style="font-size: 11px; color: var(--color-text-muted); display: block; margin-bottom: 5px;">Simulate Wi-Fi Signal Strength</label>
+                <select id="sim-signal-strength" onchange="simulateSignalChange(this.value)" style="width: 100%; background: var(--bg-dark-accent); border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 6px; font-size:12px;">
+                  <option value="strong">Strong Signal (-45 dBm) [Green]</option>
+                  <option value="weak">Weak Signal (-78 dBm) [Yellow]</option>
+                  <option value="offline">No Signal / Disconnected (-95 dBm) [Red]</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Reports Summary -->
+            <div class="card reports-card">
+              <div class="card-title">
+                <i data-lucide="bar-chart-3" style="color: var(--color-warn);"></i>
+                Bell Activity Analytics
+              </div>
+              <div class="reports-grid-dash">
+                <div class="report-box-dash">
+                  <span class="report-num" id="dash-rings-today">0</span>
+                  <span class="report-label">Rings Today</span>
+                </div>
+                <div class="report-box-dash">
+                  <span class="report-num" id="dash-rings-week">25</span>
+                  <span class="report-label">Rings This Week</span>
+                </div>
+              </div>
+              <!-- Mini Progress visualization -->
+              <div class="progress-wrap-dash">
+                <div class="progress-label-row">
+                  <span>Weekly Goal Completion</span>
+                  <span id="weekly-goal-percent">71%</span>
+                </div>
+                <div class="progress-bar-bg-dash">
+                  <div class="progress-bar-fill-dash" id="weekly-goal-fill" style="width: 71%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ==================== TAB 1: HOME OVERVIEW ==================== -->
+      <section class="page-section" id="sec-home">
+        <div class="hero-banner">
+          <div class="hero-text">
+            <span class="hero-badge">IoT Mini-Project Report</span>
+            <h2>Automated School Bell Controller using ESP32</h2>
+            <p>
+              An internet-synchronized, high-precision automated bell ringing system. Using Wi-Fi network times (NTP) backed by a hardware Real-Time Clock (RTC), the microcontroller fetches schedules dynamically from a Cloud Database and controls a high-power physical AC School Bell using a safety-optoisolated relay.
+            </p>
+            <div class="btn-group">
+              <button class="btn btn-primary" onclick="switchTab('simulator')">
+                <i data-lucide="play"></i> Launch Simulator
+              </button>
+              <button class="btn" onclick="switchTab('hardware')">
+                <i data-lucide="info"></i> View Pin Connection Map
+              </button>
+            </div>
+          </div>
+          <div class="hero-graphic">
+            <i data-lucide="bell" class="glowing-bell-ring"></i>
+          </div>
+        </div>
+
+        <h1 class="section-title">System Features</h1>
+        <p class="section-subtitle">Core design guidelines implementing reliability and scalability for academic reports.</p>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon"><i data-lucide="clock"></i></div>
+            <h3>Dual Time Sync</h3>
+            <p>Uses Network Time Protocol (NTP) servers for sub-millisecond precision, updating a local battery-backed DS3231 hardware RTC chip to handle power/network loss.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon"><i data-lucide="database"></i></div>
+            <h3>Cloud-Backed Database</h3>
+            <p>Schedules are retrieved and synced from Firebase/custom REST endpoints in JSON structure, letting administrators update bells online without re-flashing the ESP32.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon"><i data-lucide="shield-check"></i></div>
+            <h3>Industrial Relay Switch</h3>
+            <p>Low-voltage microcontroller GPIO pins drive an optocoupled electromagnetic relay, keeping sensitive computing circuits isolated from high-voltage AC mains.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon"><i data-lucide="line-chart"></i></div>
+            <h3>Event Logs Dashboard</h3>
+            <p>Successfully executed bell triggers and diagnostic parameters (signal strength, network downtime) are automatically reported back to the cloud console.</p>
+          </div>
+        </div>
+
+        <!-- System block diagram -->
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="git-branch" style="color: var(--color-primary);"></i>
+            System Data-Flow Block Diagram
+          </div>
+          <p class="section-subtitle" style="margin-bottom: 15px;">Visualizing connection interfaces and protocols utilized in this project.</p>
+          
+          <div class="block-diagram-view">
+            <svg viewBox="0 0 600 300" class="circuit-svg">
+              <defs>
+                <marker id="arrow-system" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#8f9cae" />
+                </marker>
+              </defs>
+              
+              <!-- Core Microcontroller -->
+              <rect x="230" y="100" width="140" height="90" rx="8" fill="#0f172a" stroke="#8b5cf6" stroke-width="2" />
+              <text x="300" y="140" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">ESP32 MCU</text>
+              <text x="300" y="160" fill="#8b5cf6" font-size="10" font-weight="bold" text-anchor="middle">SYSTEM CORE</text>
+              
+              <!-- Cloud Database -->
+              <rect x="440" y="20" width="120" height="60" rx="6" fill="#0f172a" stroke="#00f0ff" stroke-width="1.5" />
+              <text x="500" y="45" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">Cloud Database</text>
+              <text x="500" y="60" fill="#00f0ff" font-size="9" text-anchor="middle">JSON Schedule / Logs</text>
+              
+              <!-- NTP Server -->
+              <rect x="40" y="20" width="120" height="60" rx="6" fill="#0f172a" stroke="#00f0ff" stroke-width="1.5" />
+              <text x="100" y="45" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">NTP Server</text>
+              <text x="100" y="60" fill="#00f0ff" font-size="9" text-anchor="middle">Network Time Sync</text>
+              
+              <!-- RTC DS3231 -->
+              <rect x="40" y="200" width="120" height="60" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1.5" />
+              <text x="100" y="225" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">DS3231 RTC</text>
+              <text x="100" y="240" fill="#10b981" font-size="9" text-anchor="middle">I2C Local Clock</text>
+
+              <!-- Relay Module -->
+              <rect x="240" y="220" width="120" height="50" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5" />
+              <text x="300" y="243" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">Relay Board</text>
+              <text x="300" y="255" fill="#f59e0b" font-size="9" text-anchor="middle">GPIO22 Trigger</text>
+
+              <!-- AC Bell -->
+              <rect x="440" y="200" width="120" height="60" rx="6" fill="#0f172a" stroke="#ef4444" stroke-width="1.5" />
+              <text x="500" y="225" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">School Bell</text>
+              <text x="500" y="240" fill="#ef4444" font-size="9" text-anchor="middle">110V/220V AC Load</text>
+
+              <!-- Connecting Paths -->
+              <!-- NTP -> ESP32 -->
+              <path d="M 120,80 L 120,130 L 230,130" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-system)" />
+              <text x="175" y="123" fill="#94a3b8" font-size="9" text-anchor="middle">Wi-Fi (UDP)</text>
+              
+              <!-- ESP32 <-> Cloud DB -->
+              <path d="M 370,130 L 480,130 L 480,80" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-system)" />
+              <path d="M 480,80 L 480,130 L 370,130" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-system)" />
+              <text x="425" y="123" fill="#94a3b8" font-size="9" text-anchor="middle">HTTPS (POST/GET)</text>
+              
+              <!-- RTC <-> ESP32 -->
+              <path d="M 100,200 L 100,160 L 230,160" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-system)" />
+              <path d="M 230,160 L 100,160 L 100,200" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-system)" />
+              <text x="165" y="153" fill="#94a3b8" font-size="9" text-anchor="middle">I2C (SDA/SCL)</text>
+
+              <!-- ESP32 -> Relay -->
+              <path d="M 300,190 L 300,220" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-system)" />
+              
+              <!-- Relay -> Bell -->
+              <path d="M 360,245 L 440,245" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow-system)" />
+              <text x="400" y="238" fill="#94a3b8" font-size="9" text-anchor="middle">AC Contact</text>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 2: FLOWCHART & SIMULATOR ==================== -->
+      <section class="page-section" id="sec-simulator">
+        <h1 class="section-title">Sequence Flow &amp; Simulator</h1>
+        <p class="section-subtitle">Observe the flowchart logic transition step-by-step using interactive controllers.</p>
+
+        <div class="simulator-layout">
+          <!-- Flowchart Col -->
+          <div class="card" style="padding: 15px;">
+            <div class="card-title">
+              <i data-lucide="flowchart" style="color: var(--color-primary); display: none;"></i>
+              <i data-lucide="git-commit"></i> Flowchart Diagram
+            </div>
+            
+            <div class="flowchart-view">
+              <svg viewBox="0 0 550 920" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <marker id="arrow-default" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#1e3a8a" />
+                  </marker>
+                  <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#00f0ff" />
+                  </marker>
+                  <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981" />
+                  </marker>
+                  <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ef4444" />
+                  </marker>
+                </defs>
+
+                <!-- FLOW PATHS -->
+                <path id="path-power-to-wifi" class="flow-path" d="M 275,62 L 275,95" />
+                <path id="path-wifi-to-sync" class="flow-path" d="M 275,139 L 275,179" />
+                <path id="path-sync-to-schedule" class="flow-path" d="M 275,223 L 275,263" />
+                <path id="path-schedule-to-compare" class="flow-path" d="M 275,307 L 275,347" />
+                <path id="path-compare-to-decision" class="flow-path" d="M 275,395 L 275,435" />
+                <path id="path-decision-to-compare" class="flow-path" d="M 155,485 L 80,485 L 80,371 L 145,371" />
+                <path id="path-decision-to-relay" class="flow-path" d="M 275,535 L 275,585" />
+                <path id="path-relay-to-ring" class="flow-path" d="M 275,629 L 275,669" />
+                <path id="path-ring-to-off" class="flow-path" d="M 275,713 L 275,753" />
+                <path id="path-off-to-upload" class="flow-path" d="M 275,797 L 275,837" />
+                <path id="path-upload-to-compare" class="flow-path" d="M 405,859 L 470,859 L 470,371 L 405,371" />
+
+                <!-- FLOW NODES -->
+                <ellipse id="node-power-on" class="flow-node start-node" cx="275" cy="40" rx="90" ry="22" />
+                <text class="flow-node-text" x="275" y="40">Power ON System</text>
+
+                <rect id="node-connect-wifi" class="flow-node" x="145" y="95" width="260" height="44" rx="8" />
+                <text class="flow-node-text" x="275" y="117">Connect ESP32 to Wi-Fi Network</text>
+
+                <rect id="node-sync-time" class="flow-node" x="145" y="179" width="260" height="44" rx="8" />
+                <text class="flow-node-text" x="275" y="201">Synchronize Time (NTP/RTC)</text>
+
+                <rect id="node-get-schedule" class="flow-node" x="145" y="263" width="260" height="44" rx="8" />
+                <text class="flow-node-text" x="275" y="285">Retrieve Schedule from Cloud DB</text>
+
+                <rect id="node-compare-time" class="flow-node" x="145" y="347" width="260" height="48" rx="8" />
+                <text class="flow-node-text" x="275" y="371">Compare Current Time &amp; Schedule</text>
+
+                <polygon id="node-is-bell-time" class="flow-node decision-node" points="275,435 395,485 275,535 155,485" />
+                <text class="flow-node-text" x="275" y="485" style="font-weight: 600;">Is it Bell Time?</text>
+                
+                <text x="110" y="472" fill="#ef4444" font-size="12" font-weight="bold" text-anchor="middle">No</text>
+                <text x="292" y="560" fill="#10b981" font-size="12" font-weight="bold" text-anchor="middle">Yes</text>
+
+                <rect id="node-activate-relay" class="flow-node" x="145" y="585" width="260" height="44" rx="8" />
+                <text class="flow-node-text" x="275" y="607">Activate Relay Module</text>
+
+                <rect id="node-ring-bell" class="flow-node alarm-node" x="145" y="669" width="260" height="44" rx="8" />
+                <text class="flow-node-text" x="275" y="691">School Bell Rings (10 Sec)</text>
+
+                <rect id="node-turn-off-bell" class="flow-node" x="145" y="753" width="260" height="44" rx="8" />
+                <text class="flow-node-text" x="275" y="775">Turn OFF Bell Automatically</text>
+
+                <rect id="node-upload-logs" class="flow-node" x="145" y="837" width="260" height="44" rx="8" />
+                <text class="flow-node-text" x="275" y="859">Upload Status &amp; Event Logs</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Simulation dashboard Panel Col -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <div class="card card-glowing" style="margin-bottom: 0;">
+              <div class="card-title">
+                <i data-lucide="gauge" style="color: var(--color-primary);"></i>
+                Hardware Monitoring Board
+              </div>
+
+              <div class="dashboard-grid">
+                <div class="widget">
+                  <i data-lucide="wifi" id="icon-wifi" style="color: var(--color-text-muted);"></i>
+                  <span class="widget-label">Wi-Fi Connection</span>
+                  <span class="widget-val" id="val-wifi"><span class="status-dot status-inactive"></span>Off</span>
+                </div>
+                
+                <div class="widget">
+                  <i data-lucide="clock" style="color: var(--color-primary);"></i>
+                  <span class="widget-label">RTC Local Clock</span>
+                  <span class="widget-val" id="val-clock" style="font-family: 'Courier Prime', monospace; letter-spacing: 0.5px;">16:26:52</span>
+                </div>
+
+                <div class="widget">
+                  <i data-lucide="cpu" style="color: var(--color-secondary);"></i>
+                  <span class="widget-label">MCU Core State</span>
+                  <span class="widget-val" id="val-state" style="font-size: 13px; text-transform: uppercase;">Power Off</span>
+                </div>
+                
+                <div class="widget">
+                  <i data-lucide="zap" id="icon-relay" style="color: var(--color-text-muted);"></i>
+                  <span class="widget-label">Relay Pin (GPIO22)</span>
+                  <span class="widget-val" id="val-relay"><span class="status-dot status-inactive"></span>LOW</span>
+                </div>
+
+                <div class="widget">
+                  <i data-lucide="bell" id="icon-bell" style="color: var(--color-text-muted);"></i>
+                  <span class="widget-label">Physical Bell</span>
+                  <span class="widget-val" id="val-bell">SILENT</span>
+                </div>
+
+                <div class="widget">
+                  <i data-lucide="cloud-lightning" id="icon-cloud" style="color: var(--color-text-muted);"></i>
+                  <span class="widget-label">Cloud Sync</span>
+                  <span class="widget-val" id="val-cloud">Offline</span>
+                </div>
+              </div>
+
+              <!-- Simulation Controllers -->
+              <h3 style="font-family: 'Outfit', sans-serif; font-size: 14px; margin-bottom: 12px; font-weight: 600;">Simulation Controllers</h3>
+              <div class="btn-group">
+                <button class="btn btn-primary" onclick="triggerBootSequence()">
+                  <i data-lucide="power"></i> Power Cycle ESP32
+                </button>
+                <button class="btn" id="btn-wifi" onclick="toggleWiFiConnection()" disabled>
+                  <i data-lucide="wifi-off"></i> Disconnect Wi-Fi
+                </button>
+                <button class="btn btn-danger" id="btn-force-bell" onclick="simulateBellTimeMatch()" disabled>
+                  <i data-lucide="bell-ring"></i> Trigger Bell Event
+                </button>
+              </div>
+
+              <!-- Schedule database manager -->
+              <div class="scheduler-box">
+                <div class="scheduler-header">
+                  <span>Cloud Stored Alarm Sync</span>
+                  <span style="font-size: 11px; font-weight: normal; color: var(--color-text-muted);" id="sync-status">Unsynchronized</span>
+                </div>
+                <div class="scheduler-chips" id="schedule-chips-container">
+                  <!-- Chips go here -->
+                </div>
+                <div class="scheduler-inputs">
+                  <input type="text" class="input-time" id="time-input" placeholder="Add Bell Alarm (HH:MM:SS)" disabled>
+                  <button class="btn" onclick="addNewAlarm()" id="btn-add-alarm" disabled style="padding: 6px 14px;">Add</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Terminal logs -->
+            <div class="card" style="margin-bottom: 0;">
+              <div class="card-title">
+                <i data-lucide="terminal" style="color: var(--color-success);"></i>
+                Serial Monitor Output (COM3)
+              </div>
+              <div class="terminal">
+                <div class="terminal-bar">
+                  <span>baudrate: 115200bps</span>
+                  <div style="display:flex;gap:4px;"><span class="status-dot status-active"></span>Connected</div>
+                </div>
+                <div class="terminal-body" id="console-logs">
+                  <div><span class="term-timestamp">[00:00:00]</span><span class="term-sys">SYSTEM: Offline. Toggle Power Cycle ESP32 above to boot.</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 3: HARDWARE GUIDE ==================== -->
+      <section class="page-section" id="sec-hardware">
+        <h1 class="section-title">Hardware Components &amp; Wiring Map</h1>
+        <p class="section-subtitle">Complete hardware list and wiring schematic configuration for college mini-projects.</p>
+
+        <div class="hw-layout">
+          <!-- ESP32 -->
+          <div class="hw-card">
+            <div class="hw-header">
+              <i data-lucide="cpu" style="color: var(--color-secondary);"></i>
+              ESP32 DevKit v1
+            </div>
+            <div class="hw-desc">
+              The primary brain. Handles internet connection, database polling, and GPIO control.
+            </div>
+            <div class="hw-specs">
+              <div class="hw-spec-row"><span class="hw-spec-label">Operating Voltage</span><span class="hw-spec-val">3.3V</span></div>
+              <div class="hw-spec-row"><span class="hw-spec-label">Wi-Fi Range</span><span class="hw-spec-val">2.4 GHz</span></div>
+              <div class="hw-spec-row"><span class="hw-spec-label">Flash Memory</span><span class="hw-spec-val">4 MB</span></div>
+            </div>
+          </div>
+
+          <!-- RTC DS3231 -->
+          <div class="hw-card">
+            <div class="hw-header">
+              <i data-lucide="clock" style="color: var(--color-success);"></i>
+              RTC DS3231 Module
+            </div>
+            <div class="hw-desc">
+              Extremely accurate I2C real-time clock. Has temperature compensation to minimize drift.
+            </div>
+            <div class="hw-specs">
+              <div class="hw-spec-row"><span class="hw-spec-label">Interface Protocol</span><span class="hw-spec-val">I2C</span></div>
+              <div class="hw-spec-row"><span class="hw-spec-label">Battery Backup</span><span class="hw-spec-val">CR2032</span></div>
+              <div class="hw-spec-row"><span class="hw-spec-label">Accuracy Drift</span><span class="hw-spec-val">&lt; 2 min/yr</span></div>
+            </div>
+          </div>
+
+          <!-- Relay Module -->
+          <div class="hw-card">
+            <div class="hw-header">
+              <i data-lucide="zap" style="color: var(--color-warn);"></i>
+              1-Channel Relay Board
+            </div>
+            <div class="hw-desc">
+              Controls high power electrical circuits with high isolation barriers (optocoupled).
+            </div>
+            <div class="hw-specs">
+              <div class="hw-spec-row"><span class="hw-spec-label">Trigger Logic</span><span class="hw-spec-val">Active HIGH</span></div>
+              <div class="hw-spec-row"><span class="hw-spec-label">Max AC Load</span><span class="hw-spec-val">10A 250VAC</span></div>
+              <div class="hw-spec-row"><span class="hw-spec-label">Opto-Isolation</span><span class="hw-spec-val">Yes</span></div>
+            </div>
+          </div>
+
+          <!-- AC Bell -->
+          <div class="hw-card">
+            <div class="hw-header">
+              <i data-lucide="bell" style="color: var(--color-danger);"></i>
+              AC Industrial Bell
+            </div>
+            <div class="hw-desc">
+              Physical school gong bell powered by mains power. Switched directly via relay contacts.
+            </div>
+            <div class="hw-specs">
+              <div class="hw-spec-row"><span class="hw-spec-label">Power Required</span><span class="hw-spec-val">220V AC</span></div>
+              <div class="hw-spec-row"><span class="hw-spec-label">Volume Level</span><span class="hw-spec-val">85 dB</span></div>
+              <div class="hw-spec-row"><span class="hw-spec-label">Coil Resistance</span><span class="hw-spec-val">150 Ohm</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wiring Table -->
+        <div class="card" style="margin-top: 30px;">
+          <div class="card-title">
+            <i data-lucide="table" style="color: var(--color-primary);"></i>
+            GPIO Pin Connection Map
+          </div>
+          <div class="table-container">
+            <table class="wiring-table">
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th>Component Pin</th>
+                  <th>ESP32 Pin</th>
+                  <th>Pin Mode / Interface</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="font-weight: 600;">DS3231 RTC Module</td>
+                  <td>VCC</td>
+                  <td>3.3V Pin</td>
+                  <td>Power Out</td>
+                  <td>Do not connect to 5V (damages I2C pins)</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600;">DS3231 RTC Module</td>
+                  <td>GND</td>
+                  <td>GND Pin</td>
+                  <td>Ground</td>
+                  <td>Common system ground</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600;">DS3231 RTC Module</td>
+                  <td>SDA</td>
+                  <td>GPIO 21</td>
+                  <td>I2C Data Line</td>
+                  <td>Hardware I2C SDA Pin</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600;">DS3231 RTC Module</td>
+                  <td>SCL</td>
+                  <td>GPIO 22</td>
+                  <td>I2C Clock Line</td>
+                  <td>Hardware I2C SCL Pin (Use RTC SCL)</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600;">1-Channel Relay</td>
+                  <td>VCC</td>
+                  <td>VIN Pin (5V)</td>
+                  <td>Power Out</td>
+                  <td>Coil requires 5V to switch electromagnetic contacts</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600;">1-Channel Relay</td>
+                  <td>GND</td>
+                  <td>GND Pin</td>
+                  <td>Ground</td>
+                  <td>Common system ground</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600;">1-Channel Relay</td>
+                  <td>IN (Trigger)</td>
+                  <td>GPIO 23</td>
+                  <td>Digital Output</td>
+                  <td>Active HIGH GPIO output pin (changes state to ring)</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600;">AC School Bell</td>
+                  <td>Phase (L)</td>
+                  <td>Relay NO (Normally Open)</td>
+                  <td>High Voltage Switch</td>
+                  <td>Bell is wired through Relay COM and NO terminals</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Schematic Block Diagram View -->
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="box" style="color: var(--color-success);"></i>
+            Circuit Connections Diagram
+          </div>
+          <div class="block-diagram-view">
+            <svg viewBox="0 0 600 340" class="circuit-svg">
+              <!-- ESP32 Board Graphic -->
+              <rect x="230" y="60" width="140" height="240" rx="10" fill="#0f172a" stroke="#8b5cf6" stroke-width="2.5" />
+              <!-- USB Port -->
+              <rect x="280" y="45" width="40" height="15" rx="2" fill="#94a3b8" />
+              <text x="300" y="100" fill="#ffffff" font-size="11" font-weight="bold" text-anchor="middle">ESP32 DevKit</text>
+              
+              <!-- Draw Pins on Left of ESP32 -->
+              <rect x="220" y="90" width="10" height="6" fill="#f8fafc" />
+              <text x="210" y="95" fill="#94a3b8" font-size="8" text-anchor="end">3.3V</text>
+              <rect x="220" y="110" width="10" height="6" fill="#f8fafc" />
+              <text x="210" y="115" fill="#94a3b8" font-size="8" text-anchor="end">GND</text>
+              <rect x="220" y="170" width="10" height="6" fill="#f8fafc" />
+              <text x="210" y="175" fill="#94a3b8" font-size="8" text-anchor="end">GPIO21 (SDA)</text>
+              <rect x="220" y="190" width="10" height="6" fill="#f8fafc" />
+              <text x="210" y="195" fill="#94a3b8" font-size="8" text-anchor="end">GPIO22 (SCL)</text>
+
+              <!-- Draw Pins on Right of ESP32 -->
+              <rect x="370" y="90" width="10" height="6" fill="#f8fafc" />
+              <text x="390" y="95" fill="#94a3b8" font-size="8" text-anchor="start">5V (VIN)</text>
+              <rect x="370" y="110" width="10" height="6" fill="#f8fafc" />
+              <text x="390" y="115" fill="#94a3b8" font-size="8" text-anchor="start">GND</text>
+              <rect x="370" y="150" width="10" height="6" fill="#f8fafc" />
+              <text x="390" y="155" fill="#94a3b8" font-size="8" text-anchor="start">GPIO23 (Relay)</text>
+
+              <!-- RTC Module Graphic (Left side) -->
+              <rect x="30" y="120" width="110" height="110" rx="6" fill="#0b132b" stroke="#10b981" stroke-width="2" />
+              <text x="85" y="145" fill="#ffffff" font-size="12" font-weight="bold" text-anchor="middle">DS3231 RTC</text>
+              <!-- Battery Circle -->
+              <circle cx="85" cy="180" r="16" fill="none" stroke="#94a3b8" stroke-width="1.5" />
+              <text x="85" y="183" fill="#94a3b8" font-size="9" text-anchor="middle">CR2032</text>
+              
+              <!-- Relay Module Graphic (Right side) -->
+              <rect x="460" y="90" width="110" height="120" rx="6" fill="#0b132b" stroke="#f59e0b" stroke-width="2" />
+              <text x="515" y="115" fill="#ffffff" font-size="12" font-weight="bold" text-anchor="middle">1-Ch Relay</text>
+              <rect x="500" y="140" width="30" height="20" rx="2" fill="#0f172a" stroke="#f59e0b" />
+              <text x="515" y="153" fill="#f59e0b" font-size="8" font-weight="bold" text-anchor="middle">COIL</text>
+
+              <!-- Physical AC Bell (Far Right/Bottom) -->
+              <rect x="460" y="250" width="110" height="70" rx="6" fill="#0b132b" stroke="#ef4444" stroke-width="2" />
+              <text x="515" y="280" fill="#ffffff" font-size="12" font-weight="bold" text-anchor="middle">AC Bell</text>
+              <text x="515" y="295" fill="#94a3b8" font-size="9" text-anchor="middle">Load Terminal</text>
+
+              <!-- Wiring Paths -->
+              <!-- RTC Power Lines -->
+              <path d="M 140,150 L 170,150 L 170,95 L 220,95" fill="none" stroke="#ef4444" stroke-width="1.5" /> <!-- VCC -->
+              <path d="M 140,165 L 180,165 L 180,115 L 220,115" fill="none" stroke="#000000" stroke-width="1.5" /> <!-- GND -->
+              
+              <!-- RTC I2C Bus Lines -->
+              <path d="M 140,185 L 220,175" fill="none" stroke="#00f0ff" stroke-width="1.5" /> <!-- SDA -->
+              <path d="M 140,205 L 220,195" fill="none" stroke="#a5b4fc" stroke-width="1.5" /> <!-- SCL -->
+
+              <!-- Relay Power Lines -->
+              <path d="M 380,95 L 430,95 L 430,130 L 460,130" fill="none" stroke="#ef4444" stroke-width="1.5" /> <!-- VCC -->
+              <path d="M 380,115 L 420,115 L 420,150 L 460,150" fill="none" stroke="#000000" stroke-width="1.5" /> <!-- GND -->
+              
+              <!-- Relay Trigger Line -->
+              <path d="M 380,155 L 460,170" fill="none" stroke="#f59e0b" stroke-width="1.5" /> <!-- IN -->
+
+              <!-- AC Wiring through Relay contacts -->
+              <!-- AC Line In -> Relay COM -->
+              <line x1="420" y1="225" x2="480" y2="200" stroke="#f59e0b" stroke-width="2" />
+              <text x="405" y="228" fill="#94a3b8" font-size="9" text-anchor="middle">AC Phase</text>
+              <!-- Relay NO -> Bell -->
+              <path d="M 540,210 L 540,250" fill="none" stroke="#ef4444" stroke-width="2" />
+              <!-- AC Neutral -> Bell -->
+              <line x1="420" y1="310" x2="460" y2="310" stroke="#0000ff" stroke-width="2" />
+              <text x="405" y="313" fill="#94a3b8" font-size="9" text-anchor="middle">AC Neutral</text>
+
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 4: FIRMWARE CODE ==================== -->
+      <section class="page-section" id="sec-code">
+        <h1 class="section-title">ESP32 Firmware Code</h1>
+        <p class="section-subtitle">Real-world production C++ Arduino source code utilizing Wi-Fi, NTP, RTC, and non-blocking timers.</p>
+
+        <div class="card" style="padding: 0; border-radius: 12px; overflow: hidden;">
+          <div class="code-editor-header">
+            <div class="code-title">
+              <i data-lucide="file-code" style="color: var(--color-warn); width: 16px; height: 16px;"></i>
+              SchoolBell_Controller.ino
+            </div>
+            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;" onclick="copyFirmwareCode()">
+              <i data-lucide="copy" style="width:14px;height:14px;"></i> Copy Code
+            </button>
+          </div>
+          
+          <div class="code-container">
+            <pre class="code-block" id="firmware-code-block"><code><span class="c-comment">/*
+  IoT School Bell Controller - Firmware Code
+  Uses hardware DS3231 RTC module synced with NTP clock.
+  Schedules retrieved from database online.
+*/</span>
+
+<span class="c-keyword">#include</span> <span class="c-string">&lt;WiFi.h&gt;</span>
+<span class="c-keyword">#include</span> <span class="c-string">&lt;NTPClient.h&gt;</span>
+<span class="c-keyword">#include</span> <span class="c-string">&lt;WiFiUdp.h&gt;</span>
+<span class="c-keyword">#include</span> <span class="c-string">&lt;RTClib.h&gt;</span>
+<span class="c-keyword">#include</span> <span class="c-string">&lt;HTTPClient.h&gt;</span>
+<span class="c-keyword">#include</span> <span class="c-string">&lt;ArduinoJson.h&gt;</span>
+<span class="c-keyword">#include</span> <span class="c-string">&lt;vector&gt;</span>
+
+<span class="c-comment">// Wi-Fi Configurations</span>
+<span class="c-type">const char*</span> ssid     = <span class="c-string">"School_Bell_Net"</span>;
+<span class="c-type">const char*</span> password = <span class="c-string">"WiFiPassword123"</span>;
+
+<span class="c-comment">// API Server Endpoint Locations</span>
+<span class="c-type">const char*</span> scheduleApi = <span class="c-string">"https://api.schoolbell-iot.com/v1/schedule"</span>;
+<span class="c-type">const char*</span> loggingApi  = <span class="c-string">"https://api.schoolbell-iot.com/v1/logs"</span>;
+
+<span class="c-comment">// GPIO Configurations</span>
+<span class="c-type">const int</span> RELAY_PIN = <span class="c-type">23</span>;
+<span class="c-type">const int</span> BELL_RING_DURATION = <span class="c-type">10000</span>; <span class="c-comment">// 10 seconds in milliseconds</span>
+
+<span class="c-comment">// Hardware Objects</span>
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, <span class="c-string">"pool.ntp.org"</span>, <span class="c-type">19800</span>); <span class="c-comment">// Indian Standard Time (IST) offset = 19800s</span>
+RTC_DS3231 rtc;
+
+<span class="c-comment">// Memory Schedule vector</span>
+std::vector&lt;String&gt; bellSchedule;
+
+<span class="c-type">void</span> <span class="c-func">setup</span>() {
+  Serial.<span class="c-func">begin</span>(<span class="c-type">115200</span>);
+  <span class="c-func">pinMode</span>(RELAY_PIN, <span class="c-macro">OUTPUT</span>);
+  <span class="c-func">digitalWrite</span>(RELAY_PIN, <span class="c-macro">LOW</span>); <span class="c-comment">// Initial OFF state</span>
+
+  <span class="c-comment">// Wi-Fi Connection</span>
+  WiFi.<span class="c-func">begin</span>(ssid, password);
+  <span class="c-keyword">while</span> (WiFi.<span class="c-func">status</span>() != WL_CONNECTED) {
+    <span class="c-func">delay</span>(<span class="c-type">500</span>);
+    Serial.<span class="c-func">print</span>(<span class="c-string">"."</span>);
+  }
+  Serial.<span class="c-func">println</span>(<span class="c-string">"\n[+] WiFi Connected!"</span>);
+
+  <span class="c-comment">// Initialize Real Time Clock (RTC)</span>
+  <span class="c-keyword">if</span> (!rtc.<span class="c-func">begin</span>()) {
+    Serial.<span class="c-func">println</span>(<span class="c-string">"[-] RTC connection failure"</span>);
+  }
+
+  <span class="c-comment">// Synchronize time with NTP server</span>
+  timeClient.<span class="c-func">begin</span>();
+  <span class="c-keyword">if</span> (timeClient.<span class="c-func">update</span>()) {
+    rtc.<span class="c-func">adjust</span>(DateTime(timeClient.<span class="c-func">getEpochTime</span>()));
+    Serial.<span class="c-func">println</span>(<span class="c-string">"[+] RTC synced with NTP time"</span>);
+  }
+
+  <span class="c-comment">// Retrieve alarm timings</span>
+  <span class="c-func">fetchCloudSchedule</span>();
+}
+
+<span class="c-type">void</span> <span class="c-func">loop</span>() {
+  <span class="c-comment">// Auto reconnect handler</span>
+  <span class="c-keyword">if</span> (WiFi.<span class="c-func">status</span>() != WL_CONNECTED) {
+    WiFi.<span class="c-func">disconnect</span>();
+    WiFi.<span class="c-func">reconnect</span>();
+  }
+
+  <span class="c-comment">// Local RTC time reading</span>
+  DateTime now = rtc.<span class="c-func">now</span>();
+  <span class="c-type">char</span> timeStr[<span class="c-type">9</span>];
+  <span class="c-func">sprintf</span>(timeStr, <span class="c-string">"%02d:%02d:%02d"</span>, now.hour(), now.minute(), now.second());
+
+  <span class="c-comment">// Scan schedule vector</span>
+  <span class="c-keyword">for</span> (<span class="c-type">int</span> i = <span class="c-type">0</span>; i &lt; bellSchedule.size(); i++) {
+    <span class="c-keyword">if</span> (bellSchedule[i] == String(timeStr)) {
+      <span class="c-func">ringBellSequence</span>(timeStr);
+      <span class="c-keyword">break</span>;
+    }
+  }
+  
+  <span class="c-func">delay</span>(<span class="c-type">1000</span>); <span class="c-comment">// Scan once per second</span>
+}
+
+<span class="c-type">void</span> <span class="c-func">ringBellSequence</span>(<span class="c-type">const char*</span> timestamp) {
+  Serial.<span class="c-func">printf</span>(<span class="c-string">"[!] MATCH: Alarm event triggered at %s\n"</span>, timestamp);
+  
+  <span class="c-comment">// Activate Relay and Bell (AC Contacts closed)</span>
+  <span class="c-func">digitalWrite</span>(RELAY_PIN, <span class="c-macro">HIGH</span>);
+  Serial.<span class="c-func">println</span>(<span class="c-string">"[+] Relay ON. Bell ringing..."</span>);
+  
+  <span class="c-comment">// Non-blocking delay for safety (represented here as basic delay)</span>
+  <span class="c-func">delay</span>(BELL_RING_DURATION);
+  
+  <span class="c-comment">// Deactivate Relay and Bell</span>
+  <span class="c-func">digitalWrite</span>(RELAY_PIN, <span class="c-macro">LOW</span>);
+  Serial.<span class="c-func">println</span>(<span class="c-string">"[-] Relay OFF. Bell silenced."</span>);
+
+  <span class="c-comment">// Log event payload back to Cloud Platform</span>
+  <span class="c-func">postEventLog</span>(timestamp);
+}
+
+<span class="c-type">void</span> <span class="c-func">fetchCloudSchedule</span>() {
+  <span class="c-keyword">if</span> (WiFi.<span class="c-func">status</span>() == WL_CONNECTED) {
+    HTTPClient http;
+    http.<span class="c-func">begin</span>(scheduleApi);
+    <span class="c-type">int</span> httpCode = http.<span class="c-func">GET</span>();
+    <span class="c-keyword">if</span> (httpCode == HTTP_CODE_OK) {
+      String payload = http.<span class="c-func">getString</span>();
+      StaticJsonDocument&lt;<span class="c-type">1024</span>&gt; doc;
+      <span class="c-func">deserializeJson</span>(doc, payload);
+      JsonArray arr = doc.as&lt;JsonArray&gt;();
+      bellSchedule.clear();
+      <span class="c-keyword">for</span>(JsonVariant v : arr) {
+        bellSchedule.push_back(v.as&lt;String&gt;());
+      }
+      Serial.<span class="c-func">println</span>(<span class="c-string">"[+] Cloud Schedule loaded successfully."</span>);
+    }
+    http.<span class="c-func">end</span>();
+  }
+}
+
+<span class="c-type">void</span> <span class="c-func">postEventLog</span>(<span class="c-type">const char*</span> timestamp) {
+  <span class="c-keyword">if</span> (WiFi.<span class="c-func">status</span>() == WL_CONNECTED) {
+    HTTPClient http;
+    http.<span class="c-func">begin</span>(loggingApi);
+    http.<span class="c-func">addHeader</span>(<span class="c-string">"Content-Type"</span>, <span class="c-string">"application/json"</span>);
+    
+    StaticJsonDocument&lt;<span class="c-type">200</span>&gt; doc;
+    doc[<span class="c-string">"event"</span>] = <span class="c-string">"BELL_RING"</span>;
+    doc[<span class="c-string">"timestamp"</span>] = timestamp;
+    doc[<span class="c-string">"status"</span>] = <span class="c-string">"SUCCESS"</span>;
+    doc[<span class="c-string">"device_id"</span>] = <span class="c-string">"ESP32_BELL_01"</span>;
+    
+    String requestBody;
+    <span class="c-func">serializeJson</span>(doc, requestBody);
+    <span class="c-type">int</span> httpResponse = http.<span class="c-func">POST</span>(requestBody);
+    Serial.<span class="c-func">printf</span>(<span class="c-string">"[+] Cloud Log Response: %d\n"</span>, httpResponse);
+    http.<span class="c-func">end</span>();
+  }
+}
+</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 5: CLOUD LOGS ==================== -->
+      <section class="page-section" id="sec-cloud">
+        <h1 class="section-title">Cloud Admin &amp; Database logs</h1>
+        <p class="section-subtitle">Real-time statistics dashboard reporting status, rings, and connectivity health indicators.</p>
+
+        <!-- Stats row -->
+        <div class="analytics-header-grid">
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-title" style="margin-bottom:8px; font-size:14px;"><i data-lucide="activity"></i> Total Ring Triggers</div>
+            <div style="font-size:32px; font-weight:800; color:var(--color-primary);" id="cloud-total-rings">0</div>
+            <span style="font-size:11px; color:var(--color-text-muted);">Events recorded today</span>
+          </div>
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-title" style="margin-bottom:8px; font-size:14px;"><i data-lucide="wifi"></i> WiFi Strength (RSSI)</div>
+            <div style="font-size:32px; font-weight:800; color:var(--color-success);" id="cloud-wifi-strength">-58 dBm</div>
+            <span style="font-size:11px; color:var(--color-text-muted);">Connection Quality: Good</span>
+          </div>
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-title" style="margin-bottom:8px; font-size:14px;"><i data-lucide="clock"></i> Last Log Timestamp</div>
+            <div style="font-size:18px; font-weight:800; color:var(--color-warn); margin: 8px 0;" id="cloud-last-timestamp">N/A</div>
+            <span style="font-size:11px; color:var(--color-text-muted);">Latest uploaded API log</span>
+          </div>
+        </div>
+
+        <!-- Canvas Chart -->
+        <div class="card" style="margin-top:24px;">
+          <div class="card-title">
+            <i data-lucide="bar-chart-3" style="color:var(--color-secondary);"></i>
+            Bell Activity History Graph
+          </div>
+          <div class="chart-card">
+            <canvas id="analytics-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- DB event table -->
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="database" style="color:var(--color-primary);"></i>
+            Synchronized Cloud DB Event Logs
+          </div>
+          <div class="logs-table-container">
+            <table class="wiring-table" id="cloud-logs-table">
+              <thead>
+                <tr>
+                  <th>Event ID</th>
+                  <th>Device ID</th>
+                  <th>Event Name</th>
+                  <th>Logged Time</th>
+                  <th>Relay Status</th>
+                  <th>HTTP Code</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Rows appended dynamically -->
+                <tr id="empty-table-row">
+                  <td colspan="6" style="text-align: center; color: var(--color-text-muted); padding: 20px;">No events recorded. Boot device and trigger alarm loops.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 6: HOLIDAY CALENDAR ==================== -->
+      <section class="page-section" id="sec-holidays">
+        <div class="dashboard-header-banner">
+          <div>
+            <h1 class="section-title">Government Holidays &amp; Calendar</h1>
+            <p class="section-subtitle" style="margin-bottom: 0;">Interactive scheduling calendar with highlighted National &amp; Public Holidays.</p>
+          </div>
+          <div class="admin-badge" style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.2); color: #f87171; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="calendar" style="width: 13px; height: 13px;"></i>
+            <span>Mute on Holidays: Active</span>
+          </div>
+        </div>
+
+        <div class="simulator-layout">
+          <!-- Calendar Card -->
+          <div class="card card-glowing" style="padding: 20px;">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <i data-lucide="calendar-days" style="color: var(--color-primary);"></i>
+                Interactive Calendar Grid (2026)
+              </div>
+              <div class="calendar-controls-month" style="display:flex; align-items:center; gap:8px;">
+                <button type="button" class="btn-icon-only" onclick="changeCalMonth(-1)">
+                  <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                </button>
+                <span id="cal-month-year-label" style="font-weight: 700; font-family: 'Outfit'; min-width: 110px; text-align: center; font-size:14px;">June 2026</span>
+                <button type="button" class="btn-icon-only" onclick="changeCalMonth(1)">
+                  <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Calendar Month Grid -->
+            <div class="calendar-month-grid-wrapper">
+              <div class="calendar-weekdays-row" style="display:grid; grid-template-columns:repeat(7, 1fr); text-align:center; font-size:11px; font-weight:700; text-transform:uppercase; color:var(--color-text-muted); padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:8px;">
+                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+              </div>
+              <div class="calendar-days-grid" id="cal-days-grid" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px;">
+                <!-- Day cells injected dynamically -->
+              </div>
+            </div>
+            <p style="font-size: 11.5px; color: var(--color-text-muted); margin-top: 15px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              <i data-lucide="info" style="width: 13px; height: 13px; color: var(--color-primary);"></i>
+              Click on any date to manually set the simulated system clock to that day.
+            </p>
+          </div>
+
+          <!-- Holidays Directory List Card -->
+          <div class="card">
+            <div class="card-title">
+              <i data-lucide="landmark" style="color: var(--color-warn);"></i>
+              Government Holidays Directory
+            </div>
+            <p class="section-subtitle" style="font-size: 13px; margin-bottom: 15px;">
+              Listed public holidays will automatically deactivate the school bell triggers when the system clock matches their date.
+            </p>
+            <div class="holiday-list-container" id="holiday-directory-list" style="display:flex; flex-direction:column; gap:10px; max-height: 380px; overflow-y: auto;">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Toast Notification System -->
+  <div class="toast-msg" id="toast-container">
+    Code copied to clipboard!
+  </div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
